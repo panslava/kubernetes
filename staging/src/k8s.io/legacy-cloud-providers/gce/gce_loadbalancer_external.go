@@ -21,7 +21,6 @@ package gce
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -42,13 +41,7 @@ import (
 
 const (
 	errStrLbNoHosts = "cannot EnsureLoadBalancer() with no hosts"
-	NetLBFinalizer  = "gke.networking.io/l4-netlb-v2"
-	RBSConfigKey    = "cloud.google.com/l4-rbs"
 )
-
-type RBSConfig struct {
-	Enabled bool `json:"enabled"`
-}
 
 // ensureExternalLoadBalancer is the external implementation of LoadBalancer.EnsureLoadBalancer.
 // Our load balancers in GCE consist of four separate GCE resources - a static
@@ -60,14 +53,8 @@ type RBSConfig struct {
 // each is needed.
 func (g *Cloud) ensureExternalLoadBalancer(clusterName string, clusterID string, apiService *v1.Service, existingFwdRule *compute.ForwardingRule, nodes []*v1.Node) (*v1.LoadBalancerStatus, error) {
 	// Check if service opts-in for new NetLB
-	if val, ok := apiService.Annotations[RBSConfigKey]; ok {
-		config := RBSConfig{}
-		if err := json.Unmarshal([]byte(val), &config); err != nil {
-			return nil, fmt.Errorf("RBSConfig annotation is invalid json: %v", err)
-		}
-		if config.Enabled {
-			return nil, cloudprovider.ImplementedElsewhere
-		}
+	if val, ok := apiService.Annotations[RBSAnnotationKey]; ok && val == RBSEnabled {
+		return nil, cloudprovider.ImplementedElsewhere
 	}
 
 	if len(nodes) == 0 {
