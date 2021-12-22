@@ -21,6 +21,7 @@ package gce
 
 import (
 	compute "google.golang.org/api/compute/v1"
+	cloudprovider "k8s.io/cloud-provider"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/filter"
@@ -76,6 +77,10 @@ func (g *Cloud) ListInstancesInInstanceGroup(name string, zone string, state str
 // AddInstancesToInstanceGroup adds the given instances to the given
 // instance group.
 func (g *Cloud) AddInstancesToInstanceGroup(name string, zone string, instanceRefs []*compute.InstanceReference) error {
+	// skip processing, if handled by Ingress-GCE
+	if g.AlphaFeatureGate.Enabled(AlphaFeatureNetLBRbs) {
+		return cloudprovider.ImplementedElsewhere
+	}
 	ctx, cancel := cloud.ContextWithCallTimeout()
 	defer cancel()
 
@@ -93,6 +98,11 @@ func (g *Cloud) AddInstancesToInstanceGroup(name string, zone string, instanceRe
 // RemoveInstancesFromInstanceGroup removes the given instances from
 // the instance group.
 func (g *Cloud) RemoveInstancesFromInstanceGroup(name string, zone string, instanceRefs []*compute.InstanceReference) error {
+	// skip processing, if handled by Ingress-GCE
+	if g.AlphaFeatureGate.Enabled(AlphaFeatureNetLBRbs) {
+		return cloudprovider.ImplementedElsewhere
+	}
+
 	ctx, cancel := cloud.ContextWithCallTimeout()
 	defer cancel()
 
