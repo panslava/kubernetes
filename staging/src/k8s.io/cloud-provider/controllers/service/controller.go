@@ -151,6 +151,7 @@ func New(
 	nodeInformer.Informer().AddEventHandlerWithResyncPeriod(
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(cur interface{}) {
+				klog.V(2).Infof("New node added, enqueuing, node: %v", cur)
 				s.enqueueNode(cur)
 			},
 			UpdateFunc: func(old, cur interface{}) {
@@ -165,12 +166,14 @@ func New(
 				}
 
 				if !shouldSyncUpdatedNode(oldNode, curNode) {
+					klog.V(2).Infof("Skipping Node update, since shouldSyncUpdatedNode(oldNode, curNode) = false. updateNode: %+v, currentNode: %+v", oldNode, curNode)
 					return
 				}
-
+				klog.V(2).Infof("Node has been updated, enqueuing, newNode: %+v, oldNode: %+v", curNode, oldNode)
 				s.enqueueNode(curNode)
 			},
 			DeleteFunc: func(old interface{}) {
+				klog.V(2).Infof("Node deleted, enqueuing, node: %v", old)
 				s.enqueueNode(old)
 			},
 		},
@@ -707,6 +710,7 @@ func (c *Controller) nodeSyncService(svc *v1.Service, oldNodes, newNodes []*v1.N
 	newNodes = filterWithPredicates(newNodes, getNodePredicatesForService(svc)...)
 	oldNodes = filterWithPredicates(oldNodes, getNodePredicatesForService(svc)...)
 	if nodeNames(newNodes).Equal(nodeNames(oldNodes)) {
+		klog.V(4).Infof("newNodes are equal to oldNodes, skipping lockedUpdateLoadBalancerHosts for service %s/%s", svc.Namespace, svc.Name)
 		return retSuccess
 	}
 	klog.V(4).Infof("nodeSyncService started for service %s/%s", svc.Namespace, svc.Name)
